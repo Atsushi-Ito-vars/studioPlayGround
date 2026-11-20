@@ -1,0 +1,468 @@
+<!doctype html><html lang="ja" data-theme="light"><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>L-Git 導入効果シミュレーター</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+/* layout: navy hero band → two columns (inputs left, sticky result card right) → disclaimer + CTA band */
+:root{
+  --bg:#f5f6fa; --paper:#ffffff; --ink:#1b2246; --sub:#545b78; --muted:#8a90a8;
+  --navy:#1a2150; --blue:#3756d4; --blue-soft:#e8ecfb; --line:#dfe2ec;
+  --good:#1a9b6c; --warn:#c2410c; --bar-cost:#9aa3c4;
+  --eff:#14855c; --eff-soft:#e4f4ec; --cost:#c25410; --cost-soft:#fcefe4;
+  --f:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#10142b; --paper:#181d3a; --ink:#e8eaf5; --sub:#b3b8d2; --muted:#8a90ad;
+  --navy:#0b0e22; --blue:#7f97ff; --blue-soft:#232a55; --line:#2c3360;
+  --good:#3fcf98; --warn:#ff9a62; --bar-cost:#5a628c;
+  --eff:#4fd3a0; --eff-soft:#133a2e; --cost:#ffa266; --cost-soft:#3d2617; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10142b; --paper:#181d3a; --ink:#e8eaf5; --sub:#b3b8d2; --muted:#8a90ad;
+  --navy:#0b0e22; --blue:#7f97ff; --blue-soft:#232a55; --line:#2c3360;
+  --good:#3fcf98; --warn:#ff9a62; --bar-cost:#5a628c;
+  --eff:#4fd3a0; --eff-soft:#133a2e; --cost:#ffa266; --cost-soft:#3d2617; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);font-size:15px;line-height:1.75;font-variant-numeric:tabular-nums}
+.wrap{max-width:1080px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.hero{background:var(--navy);color:#fff}
+.hero .wrap{padding-block:48px 40px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;color:#9fb0ff;margin:0 0 10px}
+.hero h1{font-size:clamp(26px,4vw,38px);line-height:1.35;font-weight:900;margin:0 0 14px;text-wrap:balance}
+.hero p{margin:0;max-width:640px;color:#d3d8f2}
+.draft{display:inline-block;margin-top:16px;font-size:12px;border:1px solid #6b78c2;color:#c9d1ff;padding:2px 10px;border-radius:999px}
+.step{padding-block:36px 8px}
+.step+.step{border-top:1px solid var(--line);margin-top:24px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:28px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.stephead{display:flex;gap:14px;align-items:flex-start;margin-bottom:18px}
+.stephead h2{font-size:22px;margin:0;font-weight:900;display:flex;align-items:center;gap:10px}
+.stephead h2 small{font-size:12px;font-weight:500;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:0 10px}
+.stephead p{margin:2px 0 0;color:var(--sub);font-size:14px;max-width:640px}
+.num{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:900;color:#fff}
+.num.c{background:var(--cost)} .num.e{background:var(--eff)}
+.big.c{color:var(--cost)}
+.cond{font-size:12px;color:var(--muted);margin:0 0 14px;line-height:1.6}
+.next{display:block;text-align:center;margin-top:10px;font-size:14px;font-weight:700;color:var(--eff);text-decoration:none;border:1px solid var(--eff);border-radius:6px;padding:10px}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:22px 22px 8px}
+.panel+.panel{margin-top:16px}
+.panel h2{font-size:17px;margin:0 0 4px;font-weight:700}
+.panel .lead{font-size:13px;color:var(--sub);margin:0 0 16px}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px 18px;margin-bottom:14px}
+.f label{display:block;font-size:13px;font-weight:500;color:var(--sub);margin-bottom:4px}
+.f .in{display:flex;align-items:center;border:1px solid var(--line);border-radius:6px;background:var(--bg);overflow:hidden}
+.f .in:focus-within{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-soft)}
+.f input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:inherit;font-size:16px;padding:8px 10px;text-align:right}
+.f input:focus{outline:none}
+.f .u{font-size:12px;color:var(--muted);padding:0 10px 0 2px;white-space:nowrap}
+.f small{display:block;font-size:12px;color:var(--muted);margin-top:3px;line-height:1.5}
+.calc{font-size:13px;color:var(--sub);border-top:1px dashed var(--line);padding:10px 0 14px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.calc b{color:var(--ink);font-weight:700}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;padding:6px 14px;border:0;background:var(--paper);color:var(--sub);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--blue);color:#fff}
+button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.result{position:sticky;top:calc(env(safe-area-inset-top,0px) + 16px);background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:22px;box-shadow:0 8px 24px rgba(26,33,80,.08)}
+.result h2{font-size:15px;margin:0 0 14px;color:var(--sub);font-weight:500}
+.big{font-size:40px;font-weight:900;line-height:1.1;margin:0}
+.big.neg{color:var(--warn)}
+.cap{font-size:12px;color:var(--muted);margin:4px 0 18px}
+.kv{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:14px;margin:0 0 18px}
+.kv dt{color:var(--sub)} .kv dd{margin:0;text-align:right;font-weight:700}
+.bars{display:grid;gap:8px;margin-bottom:16px}
+.bar{display:grid;grid-template-columns:72px 1fr;align-items:center;gap:8px;font-size:12px;color:var(--sub)}
+.bar .t{height:12px;border-radius:3px;background:var(--blue-soft);overflow:hidden}
+.bar .t i{display:block;height:100%;background:var(--blue);transition:width .25s}
+.bar.cost .t i{background:var(--bar-cost)}
+@media (prefers-reduced-motion:reduce){.bar .t i{transition:none}}
+.hint{font-size:13px;background:var(--blue-soft);border-radius:6px;padding:10px 12px;margin:0 0 14px;color:var(--ink)}
+.hint[hidden]{display:none}
+.cta{display:block;text-align:center;background:var(--blue);color:#fff;text-decoration:none;font-weight:700;border-radius:6px;padding:11px;font-size:14px}
+.note{font-size:12px;color:var(--muted);margin:10px 0 0;line-height:1.6}
+.tiers{width:100%;border-collapse:collapse;font-size:13px;margin:4px 0 14px}
+.tiers th,.tiers td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:right}
+.tiers th:first-child,.tiers td:first-child{text-align:left}
+.tiers th{color:var(--sub);font-weight:500}
+.tiers tr.on td{color:var(--blue);font-weight:700}
+.group{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;margin:26px 0 10px}
+.group:first-child{margin-top:0}
+.group .tag,.panel h2 .tag{font-size:11px;font-weight:700;padding:1px 9px;border-radius:999px;letter-spacing:.04em}
+.group small{font-weight:400;color:var(--muted);font-size:12px}
+.tag.c{background:var(--cost-soft);color:var(--cost)} .tag.e{background:var(--eff-soft);color:var(--eff)}
+.panel h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.panel.cost{border-color:color-mix(in srgb,var(--cost) 35%,var(--line))}
+.panel.eff{border-color:color-mix(in srgb,var(--eff) 35%,var(--line))}
+.panel.cost .calc b{color:var(--cost)} .panel.eff .calc b{color:var(--eff)}
+.kvh{font-size:12px;font-weight:700;margin:0 0 6px;display:flex;justify-content:space-between}
+.kvh.e{color:var(--eff)} .kvh.c{color:var(--cost)}
+.kv.e dd{color:var(--eff)} .kv.c dd{color:var(--cost)}
+.kv.e,.kv.c{margin-bottom:12px;padding:10px 12px;border-radius:6px}
+.kv.e{background:var(--eff-soft)} .kv.c{background:var(--cost-soft)}
+.big{color:var(--eff)}
+.bar.eff .t i{background:var(--eff)} .bar.cost .t i{background:var(--cost)}
+.bar .t{background:var(--bg)}
+.radios{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px}
+.radio{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:6px;padding:10px 12px;cursor:pointer;background:var(--bg)}
+.radio:has(input:checked){border-color:var(--blue);background:var(--blue-soft)}
+.radio input{margin-top:5px;accent-color:var(--blue)}
+.radio b{display:block;font-size:14px}
+.radio small{display:block;font-size:12px;color:var(--muted);line-height:1.5}
+.group.sub{font-size:13px;margin:22px 0 8px;color:var(--sub)}
+.inc{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:var(--sub);cursor:pointer}
+.inc input{accent-color:var(--eff);width:16px;height:16px}
+.panel.off{opacity:.55}
+.panel.off .calc b{text-decoration:line-through}
+.kv .small{font-size:12px;font-weight:400}
+.panel.acc{padding:0}
+.acchead{display:flex;align-items:center;gap:12px;padding:12px 16px 12px 8px;flex-wrap:wrap}
+.accbtn{flex:1;min-width:180px;display:flex;align-items:center;gap:8px;background:none;border:0;font:inherit;color:var(--ink);cursor:pointer;text-align:left;padding:4px 8px;border-radius:6px}
+.accbtn .t{font-size:15px;font-weight:700}
+.accbtn:hover{background:var(--bg)}
+.chev{width:8px;height:8px;border-right:2px solid var(--sub);border-bottom:2px solid var(--sub);transform:rotate(-45deg);transition:transform .15s;flex:none;margin:0 4px}
+.accbtn[aria-expanded="true"] .chev{transform:rotate(45deg)}
+.acchead .val{color:var(--eff);font-size:15px;min-width:110px;text-align:right}
+.acchead .inc{margin-left:0}
+.accbody{padding:4px 22px 8px;border-top:1px dashed var(--line)}
+.accbody .lead{margin-top:12px}
+.panel.acc+.panel.acc{margin-top:8px}
+.panel.off .val{text-decoration:line-through;color:var(--muted)}
+.acctools{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-bottom:-6px}
+.acctools button{font:inherit;font-size:12px;background:none;border:1px solid var(--line);border-radius:999px;padding:2px 12px;color:var(--sub);cursor:pointer}
+@media (prefers-reduced-motion:reduce){.chev{transition:none}}
+.f.full{grid-column:1/-1}
+.presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:520px){.presets{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.pre{font:inherit;display:flex;flex-direction:column;align-items:center;gap:0;padding:10px 6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);cursor:pointer}
+.pre b{font-size:14px}
+.pre span{font-size:12px;color:var(--muted)}
+.pre[aria-pressed="true"]{border-color:var(--cost);background:var(--cost-soft)}
+.pre[aria-pressed="true"] span{color:var(--cost)}
+.pre:focus-visible{outline:2px solid var(--cost);outline-offset:2px}
+.option .wrap{padding-block:0 32px}
+.tag.o{background:var(--blue-soft);color:var(--blue)}
+.consult ul{margin:0 0 12px;padding-left:1.2em;font-size:14px}
+.consult li{margin-bottom:4px}
+footer .wrap{padding-block:0 48px;font-size:12px;color:var(--muted)}
+footer ul{margin:0;padding-left:1.2em}
+/* embedded in STUDIO: the iframe grows to full height, so the parent page scrolls */
+html.embed .result{position:static}
+</style>
+
+<section class="hero"><div class="wrap">
+<p class="eyebrow">PRICE &amp; ROI SIMULATOR</p>
+<h1>L-Git の費用と導入効果を試算する</h1>
+<p>接続台数を入れると、すぐに費用が分かります。社内でご検討の際は、続けて導入効果も試算できます。</p>
+<span class="draft">ドラフト版・数値は入力例です</span>
+</div></section>
+
+<main>
+<div class="wrap step">
+  <div class="stephead"><span class="num c">1</span><div><h2>費用を確認する</h2><p>台数とPCの入手方法を選ぶだけで、月額・年額・初期費用が分かります。</p></div></div>
+  <div class="grid">
+  <div>
+  <section class="panel cost">
+    <h2><span class="tag c">費用</span>接続台数</h2>
+    <p class="lead">L-Gitにつなぐロボット・PLCの台数です。100台を超えると単価が下がります。</p>
+    <div class="fields">
+      <div class="f full"><label>導入の規模</label>
+        <div class="presets" role="group" aria-label="導入の規模">
+          <button type="button" class="pre" data-p="s" aria-pressed="false"><b>お試し</b><span>5台</span></button>
+          <button type="button" class="pre" data-p="m" aria-pressed="true"><b>1ライン</b><span>50台</span></button>
+          <button type="button" class="pre" data-p="l" aria-pressed="false"><b>工場全体</b><span>300台</span></button>
+          <button type="button" class="pre" data-p="c" aria-pressed="false"><b>任意の台数</b><span>自分で入力</span></button>
+        </div>
+        <small id="preNote"></small>
+      </div>
+      <div class="f"><label for="units">接続台数</label><div class="in"><input id="units" type="number" min="1" step="1" value="50"><span class="u">台</span></div></div>
+      <div class="f"><label>表示通貨</label><div class="seg" role="group" aria-label="通貨"><button type="button" id="cJPY" aria-pressed="true">円</button><button type="button" id="cUSD" aria-pressed="false">米ドル</button></div><small>米ドルは海外拠点向けの価格です</small></div>
+    </div>
+    <table class="tiers" aria-label="ボリューム単価"><thead><tr><th>接続台数</th><th>割引</th><th>単価（1台・月）</th></tr></thead><tbody id="tierBody"></tbody></table>
+  </section>
+
+  <section class="panel cost">
+    <h2><span class="tag c">費用</span>収集用PC</h2>
+    <p class="lead">工場内に、データを集めるPCを1台あたり最大50台の接続で設置します。必要台数は接続台数から自動で計算します。</p>
+    <div class="radios" role="radiogroup" aria-label="PCの入手方法">
+      <label class="radio"><input type="radio" name="pc" id="pcLw" value="lw" checked><span><b>リンクウィズ経由で購入</b><small id="pcPriceTxt"></small></span></label>
+      <label class="radio"><input type="radio" name="pc" id="pcRent" value="rent"><span><b>リンクウィズからレンタル</b><small id="pcRentTxt"></small></span></label>
+      <label class="radio"><input type="radio" name="pc" id="pcOwn" value="own"><span><b>貴社でご用意</b><small>指定スペックを満たすPCをご用意ください</small></span></label>
+    </div>
+    <div class="calc"><span>必要なPC <b id="pcN"></b><span id="pcNote"></span></span><b id="o_pc"></b></div>
+  </section>
+  </div>
+
+  <aside class="result costcard" aria-live="polite">
+    <h2>費用の目安</h2>
+    <p class="big c" id="first"></p>
+    <p class="cap">初年度の合計（年間利用料 ＋ PC費用・税別）</p>
+    <dl class="kv c">
+      <dt>月額利用料</dt><dd id="monthly"></dd>
+      <dt>年間利用料</dt><dd id="cost"></dd>
+      <dt id="pcLabel">PC購入費（初年度のみ）</dt><dd id="pcCost"></dd>
+    </dl>
+    <p class="cond" id="cond"></p>
+    <p class="hint" id="hint" hidden></p>
+    <a class="cta" href="https://l-git.com/" target="_blank" rel="noopener">まずは5台・3か月無料で試す</a>
+    <a class="next" href="#roi">導入効果も試算する</a>
+  </aside>
+  </div>
+</div>
+
+<div class="wrap step" id="roi">
+  <div class="stephead"><span class="num e">2</span><div><h2>導入効果を試算する<small>任意</small></h2><p>上司や関係部署への説明用に、L-Gitで減らせる損失を利用料と比べます。貴社の数字に置き換えてお使いください。</p></div></div>
+  <div class="grid">
+  <div>
+  <div class="acctools"><span>項目を開くと条件を変更できます</span><button type="button" id="openAll">すべて開く</button></div>
+  <p class="group sub">トラブル時の損失<small>起きたときの影響を小さくする効果です</small></p>
+  <section class="panel eff acc" id="p_stop">
+    <div class="acchead">
+      <button type="button" class="accbtn" aria-expanded="false" aria-controls="body_stop"><span class="chev" aria-hidden="true"></span><span class="tag e">効果</span><span class="t">ライン停止の短縮</span></button>
+      <b class="val" id="o_stop"></b>
+      <label class="inc"><input type="checkbox" id="use_stop" checked>試算に含める</label>
+    </div>
+    <div class="accbody" id="body_stop" hidden>
+    <p class="lead">プログラムの変更が原因で設備が止まったとき、何が変わったかがすぐ分かれば、原因特定と復旧が早くなります。</p>
+    <div class="fields">
+      <div class="f"><label for="s_n">年間の発生件数</label><div class="in"><input id="s_n" type="number" min="0" step="1"><span class="u">件/年</span></div></div>
+      <div class="f"><label for="s_min">1件あたりの停止時間</label><div class="in"><input id="s_min" type="number" min="0" step="5"><span class="u">分</span></div></div>
+      <div class="f"><label for="s_loss">停止1分あたりの損失</label><div class="in"><input id="s_loss" type="number" min="0" step="1000"><span class="u cur"></span></div><small>機会損失、残業・休日出勤、納入先への影響など</small></div>
+      <div class="f"><label for="s_r">L-Gitで短縮できる割合</label><div class="in"><input id="s_r" type="number" min="0" max="100" step="5"><span class="u">%</span></div></div>
+    </div>
+    </div>
+  </section>
+
+  <section class="panel eff acc" id="p_qual">
+    <div class="acchead">
+      <button type="button" class="accbtn" aria-expanded="false" aria-controls="body_qual"><span class="chev" aria-hidden="true"></span><span class="tag e">効果</span><span class="t">品質トラブルの未然防止</span></button>
+      <b class="val" id="o_qual"></b>
+      <label class="inc"><input type="checkbox" id="use_qual" checked>試算に含める</label>
+    </div>
+    <div class="accbody" id="body_qual" hidden>
+    <p class="lead">意図しない変更や戻し忘れを変更の検知・通知で早く見つけ、不良の流出を防ぎます。</p>
+    <div class="fields">
+      <div class="f"><label for="q_n">年間の発生件数</label><div class="in"><input id="q_n" type="number" min="0" step="1"><span class="u">件/年</span></div></div>
+      <div class="f"><label for="q_cost">1件あたりの対応費用</label><div class="in"><input id="q_cost" type="number" min="0" step="10000"><span class="u cur"></span></div><small>選別・手直し、客先対応、報告書の作成など</small></div>
+      <div class="f"><label for="q_r">L-Gitで防げる割合</label><div class="in"><input id="q_r" type="number" min="0" max="100" step="5"><span class="u">%</span></div></div>
+    </div>
+    </div>
+  </section>
+
+  <section class="panel eff acc" id="p_hour">
+    <div class="acchead">
+      <button type="button" class="accbtn" aria-expanded="false" aria-controls="body_hour"><span class="chev" aria-hidden="true"></span><span class="tag e">効果</span><span class="t">トラブル時の原因調査・報告</span></button>
+      <b class="val" id="o_hour"></b>
+      <label class="inc"><input type="checkbox" id="use_hour" checked>試算に含める</label>
+    </div>
+    <div class="accbody" id="body_hour" hidden>
+    <p class="lead">トラブルが起きたときの「誰が・いつ・何を変えたか」の聞き取りや、報告書の作成にかかる時間を減らします。</p>
+    <div class="fields">
+      <div class="f"><label for="h_h">月あたりの作業時間</label><div class="in"><input id="h_h" type="number" min="0" step="1"><span class="u">時間/月</span></div><small>担当者全員の合計</small></div>
+      <div class="f"><label for="h_rate">1時間あたりの人件費</label><div class="in"><input id="h_rate" type="number" min="0" step="100"><span class="u cur"></span></div></div>
+      <div class="f"><label for="h_r">L-Gitで減らせる割合</label><div class="in"><input id="h_r" type="number" min="0" max="100" step="5"><span class="u">%</span></div></div>
+    </div>
+    </div>
+  </section>
+
+  <p class="group sub">毎日・定期の作業<small>台数や稼働日に比例して積み上がる効果です</small></p>
+  <section class="panel eff acc" id="p_bk">
+    <div class="acchead">
+      <button type="button" class="accbtn" aria-expanded="false" aria-controls="body_bk"><span class="chev" aria-hidden="true"></span><span class="tag e">効果</span><span class="t">バックアップ作業の自動化</span></button>
+      <b class="val" id="o_bk"></b>
+      <label class="inc"><input type="checkbox" id="use_bk" checked>試算に含める</label>
+    </div>
+    <div class="accbody" id="body_bk" hidden>
+    <p class="lead">USBメモリやPCをロボット・PLCにつないで、プログラムを1台ずつ吸い出す作業がなくなります。接続台数は上の値を使います。</p>
+    <div class="fields">
+      <div class="f"><label for="bk_n">年間のバックアップ回数</label><div class="in"><input id="bk_n" type="number" min="0" step="1"><span class="u">回/年</span></div><small>定期点検、長期休暇前、設備変更時など</small></div>
+      <div class="f"><label for="bk_min">1台あたりの作業時間</label><div class="in"><input id="bk_min" type="number" min="0" step="1"><span class="u">分/台</span></div><small>移動・取り出し・保存・整理を含む</small></div>
+      <div class="f"><label for="bk_rate">1時間あたりの人件費</label><div class="in"><input id="bk_rate" type="number" min="0" step="100"><span class="u cur"></span></div></div>
+      <div class="f"><label for="bk_r">L-Gitで減らせる割合</label><div class="in"><input id="bk_r" type="number" min="0" max="100" step="5"><span class="u">%</span></div></div>
+    </div>
+    </div>
+  </section>
+
+  <section class="panel eff acc" id="p_sh">
+    <div class="acchead">
+      <button type="button" class="accbtn" aria-expanded="false" aria-controls="body_sh"><span class="chev" aria-hidden="true"></span><span class="tag e">効果</span><span class="t">シフト引き継ぎ・変化点の確認</span></button>
+      <b class="val" id="o_sh"></b>
+      <label class="inc"><input type="checkbox" id="use_sh" checked>試算に含める</label>
+    </div>
+    <div class="accbody" id="body_sh" hidden>
+    <p class="lead">シフト交代や朝礼で「前の勤務で何か変えたか」を確認する時間を、変更の一覧と日次レポートで短くします。</p>
+    <div class="fields">
+      <div class="f"><label for="sh_days">年間の稼働日数</label><div class="in"><input id="sh_days" type="number" min="0" step="1"><span class="u">日/年</span></div></div>
+      <div class="f"><label for="sh_n">1日あたりの引き継ぎ回数</label><div class="in"><input id="sh_n" type="number" min="0" step="1"><span class="u">回/日</span></div><small>2交代なら2回、3交代なら3回</small></div>
+      <div class="f"><label for="sh_min">1回あたりの確認時間</label><div class="in"><input id="sh_min" type="number" min="0" step="1"><span class="u">分</span></div><small>関わる人数分の合計</small></div>
+      <div class="f"><label for="sh_rate">1時間あたりの人件費</label><div class="in"><input id="sh_rate" type="number" min="0" step="100"><span class="u cur"></span></div></div>
+      <div class="f"><label for="sh_r">L-Gitで減らせる割合</label><div class="in"><input id="sh_r" type="number" min="0" max="100" step="5"><span class="u">%</span></div></div>
+    </div>
+    </div>
+  </section>
+  </div>
+
+  <aside class="result" aria-live="polite">
+    <h2>初年度の費用対効果</h2>
+    <p class="big" id="net"></p>
+    <p class="cap">年間の効果 − 初年度の費用（利用料 ＋ PC費用）</p>
+    <dl class="kv e">
+      <dt>年間の効果</dt><dd id="benefit"></dd>
+      <dt class="small">含めた項目</dt><dd class="small" id="incN"></dd>
+    </dl>
+    <dl class="kv c">
+      <dt>初年度の費用</dt><dd id="first2"></dd>
+    </dl>
+    <dl class="kv">
+      <dt>投資対効果（初年度ROI）</dt><dd id="roi_v"></dd>
+      <dt>回収期間</dt><dd id="payback"></dd>
+      <dt>2年目以降の差額（年）</dt><dd id="net2"></dd>
+    </dl>
+    <div class="bars">
+      <div class="bar eff" id="bw_stop"><span>ライン停止</span><div class="t"><i id="b_stop"></i></div></div>
+      <div class="bar eff" id="bw_qual"><span>品質</span><div class="t"><i id="b_qual"></i></div></div>
+      <div class="bar eff" id="bw_hour"><span>原因調査</span><div class="t"><i id="b_hour"></i></div></div>
+      <div class="bar eff" id="bw_bk"><span>バックアップ</span><div class="t"><i id="b_bk"></i></div></div>
+      <div class="bar eff" id="bw_sh"><span>引き継ぎ</span><div class="t"><i id="b_sh"></i></div></div>
+      <div class="bar cost"><span>利用料</span><div class="t"><i id="b_cost"></i></div></div>
+      <div class="bar cost"><span>PC費用</span><div class="t"><i id="b_pc"></i></div></div>
+    </div>
+    <p class="cond">効果は入力値にもとづく推定です。</p>
+  </aside>
+  </div>
+</div>
+</main>
+
+<section class="option"><div class="wrap">
+  <section class="panel consult">
+    <h2><span class="tag o">オプション</span>大規模導入・コンサルティング</h2>
+    <p class="lead">100台を超える導入や、複数ライン・複数工場への展開では、L-Gitを現場の運用に定着させるためのコンサルティングを個別にご提案します。</p>
+    <ul>
+      <li>ライン・工程ごとの接続計画と、変化点の見方の設計</li>
+      <li>品質管理・生産技術・保全など、部門ごとのレポートや通知の設計</li>
+      <li>導入後の定例ミーティングによる活用支援</li>
+    </ul>
+    <p class="lead">内容と費用は導入規模に合わせてお見積もりします。このシミュレーターの試算には含まれません。</p>
+  </section>
+</div></section>
+
+<footer><div class="wrap">
+<ul>
+<li>この試算は入力値にもとづく目安で、効果を保証するものではありません。</li>
+<li>利用料は年間契約・税別です。設置や訪問などの作業費、コンサルティング費用は含みません。</li>
+<li>収集用PCは1台あたり最大50台の接続として必要台数を計算しています。PC購入費は初年度のみ、レンタル料は毎年計上します。</li>
+<li>単価は接続台数全体に、該当する段の単価を適用して計算しています。</li>
+</ul>
+</div></footer>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const TIERS=[{max:100,d:0},{max:300,d:.05},{max:500,d:.10},{max:700,d:.15},{max:Infinity,d:.20}];
+const CUR={
+  JPY:{base:3000,pc:150000,rent:4200,sym:'円',fmt:v=>Math.round(v).toLocaleString('ja-JP')+'円',unit:'円',
+    def:{units:50,s_n:2,s_min:60,s_loss:30000,s_r:50,q_n:1,q_cost:1000000,q_r:30,h_h:10,h_rate:4000,h_r:50,bk_n:2,bk_min:10,bk_rate:4000,bk_r:80,sh_days:240,sh_n:2,sh_min:10,sh_rate:4000,sh_r:50}},
+  USD:{base:25,pc:1250,rent:35,sym:'$',fmt:v=>'$'+Math.round(v).toLocaleString('en-US'),unit:'USD',
+    def:{units:50,s_n:2,s_min:60,s_loss:300,s_r:50,q_n:1,q_cost:8000,q_r:30,h_h:10,h_rate:30,h_r:50,bk_n:2,bk_min:10,bk_rate:30,bk_r:80,sh_days:290,sh_n:3,sh_min:10,sh_rate:30,sh_r:50}}
+};
+let cur='JPY';
+const ids=['units','s_n','s_min','s_loss','s_r','q_n','q_cost','q_r','h_h','h_rate','h_r','bk_n','bk_min','bk_rate','bk_r','sh_days','sh_n','sh_min','sh_rate','sh_r'];
+const KEYS=['stop','qual','hour','bk','sh'];
+// scale presets: counts and times change with the size of the rollout; money per unit comes from the currency defaults
+const PRE={
+  s:{units:5,pc:'pcRent',note:'5台・3か月無料のトライアルと同じ規模です。無料期間後に続けた場合の費用が分かります。',v:{s_n:1,s_min:30,q_n:1,h_h:3,bk_n:2,sh_n:2,sh_min:5}},
+  m:{units:50,pc:'pcLw',note:'1ライン分（収集用PC 1台）の規模です。',v:{s_n:2,s_min:60,q_n:1,h_h:10,bk_n:2,sh_n:2,sh_min:10}},
+  l:{units:300,pc:'pcLw',note:'工場全体（収集用PC 6台）の規模です。100台を超えると単価が下がります。',v:{s_n:6,s_min:60,q_n:3,h_h:40,bk_n:2,sh_n:3,sh_min:20}},
+  c:{note:'接続台数を自由に入力できます。効果の入力値は変わりません。'}
+};
+let pre='m';
+function setDefaults(){const d=CUR[cur].def;ids.forEach(k=>{if(k!=='units')$(k).value=d[k]});applyPre(false);document.querySelectorAll('.cur').forEach(e=>e.textContent=CUR[cur].unit)}
+function applyPre(setUnits){
+  document.querySelectorAll('.pre').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p===pre));
+  $('preNote').textContent=PRE[pre].note;
+  const P=PRE[pre];if(!P.units)return;
+  if(setUnits!==false||!$('units').value)$('units').value=P.units;
+  Object.entries(P.v).forEach(([k,v])=>$(k).value=v);
+  $(P.pc).checked=true;
+}
+const num=id=>{const v=parseFloat($(id).value);return isFinite(v)&&v>0?v:0};
+const pct=id=>Math.min(num(id),100)/100;
+function tierOf(u){return TIERS.findIndex(t=>u<=t.max)}
+function price(i){return CUR[cur].base*(1-TIERS[i].d)}
+function renderTiers(u){
+  const ti=tierOf(u),lo=[1,101,301,501,701];
+  $('tierBody').innerHTML=TIERS.map((t,i)=>{
+    const p=price(i);const ps=cur==='JPY'?Math.round(p).toLocaleString('ja-JP')+'円':'$'+p.toFixed(2);
+    return '<tr class="'+(i===ti?'on':'')+'"><td>'+lo[i]+(t.max===Infinity?'台以上':'〜'+t.max+'台')+'</td><td>'+(t.d?Math.round(t.d*100)+'%':'—')+'</td><td>'+ps+'</td></tr>'}).join('');
+}
+function calc(){
+  const F=CUR[cur].fmt,u=Math.max(1,Math.round(num('units')||1));
+  const ti=tierOf(u),cost=u*price(ti)*12;
+  const stop=num('s_n')*num('s_min')*num('s_loss')*pct('s_r');
+  const qual=num('q_n')*num('q_cost')*pct('q_r');
+  const hour=num('h_h')*12*num('h_rate')*pct('h_r');
+  const bk=num('bk_n')*u*num('bk_min')/60*num('bk_rate')*pct('bk_r');
+  const sh=num('sh_days')*num('sh_n')*num('sh_min')/60*num('sh_rate')*pct('sh_r');
+  const V={stop,qual,hour,bk,sh},on=k=>$('use_'+k).checked;
+  KEYS.forEach(k=>{$('p_'+k).classList.toggle('off',!on(k));$('bw_'+k).hidden=!on(k);$('o_'+k).textContent=CUR[cur].fmt(V[k])});
+  $('incN').textContent=KEYS.filter(on).length+' / '+KEYS.length;
+  const pcN=Math.ceil(u/50),buy=$('pcLw').checked,rent=$('pcRent').checked;
+  const pc=buy?pcN*CUR[cur].pc:0,rentY=rent?pcN*CUR[cur].rent*12:0;
+  $('pcN').textContent=pcN+'台';
+  $('pcNote').textContent=buy?'（初期費用・初年度のみ）':rent?'（月額・利用料と合わせてお支払い）':'';
+  $('o_pc').textContent=buy?F(pc):rent?'月 '+F(rentY/12):'貴社でご用意';
+  $('pcPriceTxt').textContent='1台 '+F(CUR[cur].pc)+'（税別）・固定資産として計上';
+  $('pcRentTxt').textContent='1台 月 '+F(CUR[cur].rent)+'（税別）・経費として処理';
+  const run=cost+rentY,ben=KEYS.reduce((a,k)=>a+(on(k)?V[k]:0),0),first=run+pc,net=ben-first,net2=ben-run;
+  
+  $('benefit').textContent=F(ben);$('cost').textContent=F(cost);$('pcCost').textContent=buy?F(pc):rent?F(rentY):'貴社でご用意';
+  $('pcLabel').textContent=buy?'PC購入費（初年度のみ）':rent?'PCレンタル料（年間）':'PC';
+  $('monthly').textContent=F(cost/12);$('first').textContent=F(first);$('first2').textContent=F(first);
+  $('cond').textContent='条件：接続'+u+'台・PC '+pcN+'台（'+(buy?'購入':rent?'レンタル':'貴社でご用意')+'）・'+(cur==='JPY'?'円':'米ドル')+'建て・年間契約・'+new Date().toLocaleDateString('ja-JP')+' 試算';
+  $('net').textContent=(net<0?'−':'+')+F(Math.abs(net));$('net').classList.toggle('neg',net<0);
+  $('net2').textContent=(net2<0?'−':'+')+F(Math.abs(net2));
+  $('roi_v').textContent=first?Math.round(net/first*100).toLocaleString()+'%':'—';
+  // payback: months for the monthly net gain (benefit − fee) to cover the PC bought up front
+  const gain=(ben-run)/12;
+  $('payback').textContent=gain<=0?'回収できません':(pc===0?'初月から':(pc/gain>24?'24か月超':(pc/gain).toFixed(1)+'か月'));
+  const pcv=pc+rentY,mx=Math.max(...KEYS.map(k=>on(k)?V[k]:0),cost,pcv,1);
+  [...KEYS.map(k=>['b_'+k,V[k]]),['b_cost',cost],['b_pc',pcv]].forEach(([k,v])=>$(k).style.width=(v/mx*100)+'%');
+  renderTiers(u);
+  const h=$('hint');
+  if(ti<TIERS.length-1&&u>=TIERS[ti].max-9){
+    const n=TIERS[ti].max+1,c2=n*price(ti+1)*12;
+    h.innerHTML='あと'+(n-u)+'台つなぐと単価が下がり、'+n+'台の年間利用料は'+F(c2)+'になります（現在より'+(c2<cost?F(cost-c2)+'安く':F(c2-cost)+'の増加')+'）。';
+    h.hidden=false;
+  }else h.hidden=true;
+}
+document.querySelectorAll('.pre').forEach(b=>b.addEventListener('click',()=>{pre=b.dataset.p;if(pre==='c'){applyPre();$('units').focus();$('units').select()}else{applyPre(true)}calc()}));
+$('units').addEventListener('input',()=>{if(pre!=='c'){pre='c';applyPre()}});
+function setCur(c){cur=c;$('cJPY').setAttribute('aria-pressed',c==='JPY');$('cUSD').setAttribute('aria-pressed',c==='USD');setDefaults();if(pre!=='c')$('units').value=PRE[pre].units;calc()}
+ids.forEach(k=>$(k).addEventListener('input',calc));
+[...KEYS.map(k=>'use_'+k),'pcLw','pcRent','pcOwn'].forEach(k=>$(k).addEventListener('change',calc));
+$('cJPY').addEventListener('click',()=>setCur('JPY'));
+$('cUSD').addEventListener('click',()=>setCur('USD'));
+document.querySelectorAll('.accbtn').forEach(b=>b.addEventListener('click',()=>{const o=b.getAttribute('aria-expanded')!=='true';b.setAttribute('aria-expanded',o);$(b.getAttribute('aria-controls')).hidden=!o;syncAll()}));
+function syncAll(){const bs=[...document.querySelectorAll('.accbtn')];$('openAll').textContent=bs.every(b=>b.getAttribute('aria-expanded')==='true')?'すべて閉じる':'すべて開く'}
+$('openAll').addEventListener('click',()=>{const bs=[...document.querySelectorAll('.accbtn')],o=!bs.every(b=>b.getAttribute('aria-expanded')==='true');bs.forEach(b=>{b.setAttribute('aria-expanded',o);$(b.getAttribute('aria-controls')).hidden=!o});syncAll()});
+setCur('JPY');
+
+// STUDIO embed: report height to the parent page, and let the parent scroll for in-page links
+if(window.self!==window.top){
+  document.documentElement.classList.add('embed');
+  let last=0;
+  const send=(extra)=>{const h=Math.ceil(document.body.getBoundingClientRect().height);
+    if(h!==last||extra){last=h;parent.postMessage(Object.assign({type:'lgit-sim',height:h},extra||{}),'*')}};
+  new ResizeObserver(()=>send()).observe(document.body);
+  window.addEventListener('load',()=>send());
+  document.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',e=>{
+    const t=document.querySelector(a.getAttribute('href'));if(!t)return;
+    e.preventDefault();send({scrollTo:Math.round(t.getBoundingClientRect().top+window.scrollY)});
+  }));
+}
+})();
+</script>
+
+</body></html>
